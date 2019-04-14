@@ -54,7 +54,7 @@ class PSI_RiF:
         # initialize otolith distributions before for-loops
         P_oto = [self.__calcPOto(kappa_oto, theta_rod) for kappa_oto in self.kappa_oto]
 
-        for i in trange(self.kappa_ver_num):
+        for i in range(self.kappa_ver_num):
             for j in range(self.kappa_hor_num):
                 for k in range(self.tau_num):
                     # compute the 2D rod-frame distribution for the given kappas, tau and rods
