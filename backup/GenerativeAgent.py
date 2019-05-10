@@ -31,7 +31,6 @@ class GenerativeAgent:
 
         # M: Initialize the PSE table.
         self.PSETable = []
-        self.PSEArray=np.array([])
 
         # Initialize stimulus grids
         self.rods = stimuli['rods']

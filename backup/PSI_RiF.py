@@ -12,6 +12,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
 from sklearn import tree
 import scipy as sc
+import matplotlib.pyplot as plt
+from plots import Plotter
 
 
 # Marc Verwoert
@@ -81,8 +83,8 @@ class PSI_RiF:
 
         # initialize otolith distributions before for-loops
         P_oto = [self.__calcPOto(kappa_oto, theta_rod) for kappa_oto in self.kappa_oto]
-        # teller=0
-        # self.CDFTable=np.zeros([0,18])
+        teller=0
+        #self.CDFTable=np.zeros([0,18])
         for i in trange(self.kappa_ver_num):
             for j in range(self.kappa_hor_num):
                 for k in range(self.tau_num):
@@ -93,17 +95,25 @@ class PSI_RiF:
                         # compute the cumulative density of all distributions convolved
                         cdf = np.cumsum(P_frame * P_oto[l], 0) / np.sum(P_frame * P_oto[l], 0)
 
-                        # M: point of subjective equivalence when probability is 0.5.
-                        idx_rod = np.argmax(cdf[:, i] > 0.5)
-                        # self.CDFTable +=  (cdf[] * self.prior[teller])
-                        # M: Add the PSE rod given the current frame orientation; the predicted threshold to the table..
-                        self.CDFTable.append(cdf[idx_rod])
+                        # M: initialize PSE array
+                        PSE = np.zeros(self.frame_num)
+
+                        # # M: for each frame orientation, add PSE to array
+                        # for pi in range(self.frame_num):
+                        #     # M: point of subjective equivalence when probability is 0.5
+                        #     idx_rod = np.argmax(cdf[:, pi] > 0.5)
+                        #     # M: add the PSE rod given the current frame orientation
+                        #     PSE[pi] = theta_rod[idx_rod]
+                        #     # M: Add the target PSE to the PSE table.
+                        #     self.CDFTable.append(PSE)
+                        #     # print('CDFTable', self.CDFTable)
+
                         # reduce cdf to |rods|, |frames| by using spline interpolation
                         cdf = self.__reduceCDF(cdf, theta_rod)
 
                         # teller += 1
-
                         PCW = cdf
+
 
                         # add distribution to look-up table
                         P[i, j, k, l] = PCW
@@ -151,6 +161,7 @@ class PSI_RiF:
         for i in range(self.frame_num):
             # use spline interpolation to get a continuous cdf
             cdf_continuous = splrep(theta_rod, cdf[:, i], s=0)
+
             # select cumulative probs of rods in self.rods from continuous cdf
             cdf_reduced[:, i] = splev(self.rods, cdf_continuous, der=0)
 
@@ -162,8 +173,6 @@ class PSI_RiF:
 
 
     def reset(self, stim_selection='adaptive'):
-
-
         # M: Trial tracker initialized
         self.trial = 0
 
@@ -191,7 +200,6 @@ class PSI_RiF:
     def __calcNextStim(self):
         # compute posterior
 
-        print('prior', self.prior)
         self.paxs = np.einsum('i,ijk->ijk', self.prior, self.lookup)
         self.paxf = np.einsum('i,ijk->ijk', self.prior, 1.0 - self.lookup)
 
@@ -315,11 +323,11 @@ class PSI_RiF:
         # using backwards induction (we go one trial backwards).
 
         for y in xrange(1, k):
-            print('loop 1 entered')
+            # print('loop 1 entered')
             for x in xrange(self.backwardTable.__len__()):
-                print('loop 2 entered')
+                # print('loop 2 entered')
                 k += -1
-                print ('k is', k)
+                # print ('k is', k)
                 # cannot take the log of 0
                 self.paxs[self.paxs == 0.0] = 1.0e-10
                 self.paxf[self.paxf == 0.0] = 1.0e-10
@@ -415,7 +423,7 @@ class PSI_RiF:
 
             # compute negative log likelihood for all responses
             neg_log_likelihood = neg_log_likelihood_right_responses + neg_log_likelihood_left_responses
-
+            self.CDFTable.append(neg_log_likelihood)
             return neg_log_likelihood
         else:
             # compute negative log likelihood for one response
@@ -425,3 +433,4 @@ class PSI_RiF:
                 return -np.log(1.0 - self.lookup[:, self.stim1_index, self.stim2_index])
             else:
                 raise Exception, 'response is ' + str(data) + ', but must be 1 or 0'
+

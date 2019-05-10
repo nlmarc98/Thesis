@@ -15,9 +15,9 @@ def sig2kap(sig):  # in degrees
     return 3.9945e3 / (sig2 + 0.0226e3)
 
 # M: Kappas 25
-kappa_ver = np.linspace(sig2kap(2.3), sig2kap(7.4), 3)
+kappa_ver = np.linspace(sig2kap(2.3), sig2kap(7.4), 2)
 # kappa_ver = [sig2kap(4.3)]
-kappa_hor = np.linspace(sig2kap(28), sig2kap(76), 3)
+kappa_hor = np.linspace(sig2kap(28), sig2kap(76), 2)
 # kappa_hor = [sig2kap(37)]
 # tau = np.linspace(0.6, 1.0, 25)
 tau = np.array([0.8])
@@ -76,7 +76,7 @@ plotter.plot()
 # M: Backward induction use 'backward'
 # for stim_selection in ['adaptive', 'product', 'backward']:
 
-for stim_selection in ['adaptive']:
+for stim_selection in ['product']:
     # set stimulus selection mode and reset psi object to initial values
     psi.reset(stim_selection)
 
@@ -98,13 +98,21 @@ for stim_selection in ['adaptive']:
 
         # M: Plot RMSE for thresholds; first argument is the predicted threshold,
         # second argument is the target threshold.
+        # M: PSE from GenAg is the target threshold, the CDF PSE is the predicted threshold.
+
         CDFArray = np.asarray(psi.CDFTable)
         # Reduce dimensionality by summing over all columns.
         CDFArrayMean = CDFArray.mean(axis=0)
         PSEArray = np.asarray(genAgent.PSETable)
-        # PSEArray2= PSEArray.mean(axis=1)
-        plotter.normalPlotter(CDFArrayMean)
-        plotter.normalPlotter(PSEArray)
+        # PSEArray2= PSEArray.mean(axis=0)
+        plotter.plotRSME(CDFArray, PSEArray)
+        #print(CDFArray)
+        print(CDFArray)
+
+        # print(psi.CDFTable)
+        # print(genAgent.PSETable)
+        #plotter.CDFPlotter(CDFArrayMean)
+        # print('cdf', psi.CDFTable)
 
         # plot updated parameter values based on mean and MAP
         plotter.plotParameterValues()
@@ -130,7 +138,7 @@ for stim_selection in ['adaptive']:
 
         # Add data to psi object
         psi.addData(response)
-        print('print psi prior', psi.prior)
+
 
         # M: Keeping track of priors
         psi.trial += 1

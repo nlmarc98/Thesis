@@ -1,12 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import GenerativeAgent as genA
-import PSI_RiF as psrif
 from mpl_toolkits.mplot3d.axes3d import Axes3D
-from GenerativeAgent import GenerativeAgent
-from PSI_RiF import PSI_RiF
-
-# Marc Verwoert
+from sklearn.metrics import mean_squared_error
 
 class Plotter:
     def __init__(self, params, params_gen, stimuli, genAgent, psi, iterations_num, plot_period=25, point_size=5):
@@ -18,7 +13,6 @@ class Plotter:
 
         # save generative agent and psi object in Plotter object
         self.genAgent = genAgent
-
         self.psi = psi
 
         # number of trials before figure(s) is/are plotted again
@@ -69,9 +63,17 @@ class Plotter:
         prob_table_plot.set_title('Generative Rod Distribution for Each Frame Orientation')
 
 
-    def plotGenVariances(self):
+    def plotGenVariances(self, print_data=False):
         # get variances from generative agent
         variances = self.genAgent.calcVariances()
+
+        # print data as space separated values
+        if print_data:
+            print '\n\n\nVariances:\n\n\n'
+            print 'frame otoliths context'
+
+            for i in range(len(self.stimuli['frames'])):
+                print self.stimuli['frames'][i] * 180 / np.pi, variances['otoliths'][i], variances['context'][i]
 
         # initialize variances figure and plot
         variances_figure = plt.figure(figsize=(8, 6))
@@ -86,9 +88,17 @@ class Plotter:
         variances_plot.legend()
 
 
-    def plotGenWeights(self):
+    def plotGenWeights(self, print_data=False):
         # get weights from generative agent
         weights = self.genAgent.calcWeights()
+
+        # print data as space separated values
+        if print_data:
+            print '\n\n\nWeights:\n\n\n'
+            print 'frame otoliths context'
+
+            for i in range(len(self.stimuli['frames'])):
+                print self.stimuli['frames'][i] * 180 / np.pi, weights['otoliths'][i], weights['context'][i]
 
         # initialize weights figure and plot
         weights_figure = plt.figure(figsize=(8, 6))
@@ -104,13 +114,20 @@ class Plotter:
         weights_plot.legend()
 
 
-    def plotGenPSE(self):
+    def plotGenPSE(self, print_data=False):
         # get PSEs from generative agent in degrees
         PSE = self.genAgent.calcPSE()
 
+        # print data as space separated values
+        if print_data:
+            print '\n\n\nPSE:\n\n\n'
+            print 'frame bias'
+
+            for i in range(len(self.stimuli['frames'])):
+                print self.stimuli['frames'][i] * 180 / np.pi, PSE[i]
+
         # initialize PSE figure and plot
         PSE_figure = plt.figure(figsize=(8, 6))
-        PSE_figure.suptitle('PSE plot', fontsize=20)
         PSE_plot = PSE_figure.add_subplot(1, 1, 1)
 
         # plot PSE
@@ -119,34 +136,8 @@ class Plotter:
         PSE_plot.set_ylabel('PSE ($^\circ$)')
         PSE_plot.set_title('Point of Subjective Equivalence for Each Frame Orientation')
 
-    # M: Calculate RMSE between predicted threshold and target threshold.
-    def RMSE(self, predictions, targets):
-        apred = np.array(predictions)
-        btarg = np.array(targets)
-        # M: Axis 1 will act on all the COLUMNS in each ROW; (Axis 0 will act on all the ROWS in each COLUMN)
-        mses = ((apred - btarg) ** 2).mean(axis=1)
-        return np.sqrt(mses)
 
-    # M: Plot RMSE for thresholds every so many trials.
-    def plotRSME(self, prediction, target):
-        # M: initialize RMSE figure and plot.
-        if self.__isTimeToPlot():
-            RPSE_figure = plt.figure(figsize=(8, 6))
-            RPSE_plot = RPSE_figure.add_subplot(1, 1, 1)
-            RPSE_RMSE = self.RMSE(prediction, target)
-            RPSE_plot.plot(self.stimuli['frames'] * 180 / np.pi, RPSE_RMSE)
-            RPSE_plot.set_xlabel('frame ($^\circ$)')
-            RPSE_plot.set_ylabel('PSE_RMSE ($^\circ$)')
-            RPSE_figure.suptitle('RMSE plot for trial', fontsize=20)
-            RPSE_plot.set_title(self.trial_num)
-
-    def normalPlotter(self, plotVal):
-        # M: initialize RMSE figure and plot.
-        plt.plot(plotVal)
-        plt.show()
-
-
-    def plotStimuli(self):
+    def plotStimuli(self, print_data=False):
         if self.selected_stimuli is None:
             self.__initStimuliFigure()
 
@@ -154,6 +145,14 @@ class Plotter:
         rod, frame = self.psi.stim
         self.selected_stimuli['rods'].append(rod * 180.0 / np.pi)
         self.selected_stimuli['frames'].append(frame * 180.0 / np.pi)
+
+        # print data as space separated values
+        if self.trial_num == self.iterations_num and print_data:
+            print '\n\n\nSelected Stimuli:\n\n\n'
+            print 'trial rod frame'
+
+            for i in range(self.iterations_num):
+                print (i + 1), self.selected_stimuli['rods'][i] * 180 / np.pi, self.selected_stimuli['frames'][i] * 180 / np.pi
 
         # only plot every self.plot_period trials
         if self.__isTimeToPlot():
@@ -427,3 +426,31 @@ class Plotter:
         else:
             title_suffix = ' for %d Responses' % (len(self.stimuli['rods']) * len(self.stimuli['frames']) * responses_num)
         plot.set_title('Negative Log Likelihood of %s and %s' % (self.free_param1, self.free_param2) + title_suffix)
+
+    # M: Calculate RMSE between predicted threshold and target threshold.
+    def RMSE(self, predictions, targets):
+            return np.sqrt(((predictions - targets) ** 2).mean(axis=0))
+
+    # M: Plot RMSE for thresholds every so many trials.
+    def plotRSME(self, pred, target):
+        # M: initialize RMSE figure and plot.
+        if self.__isTimeToPlot():
+            RPSE_figure = plt.figure(figsize=(8, 6))
+            RPSE_plot = RPSE_figure.add_subplot(1, 1, 1)
+            RPSE_RMSE = self.RMSE(pred, target)
+            RPSE_plot.plot(self.stimuli['frames'] * 180 / np.pi, RPSE_RMSE)
+            RPSE_plot.set_xlabel('frame ($^\circ$)')
+            RPSE_plot.set_ylabel('PSE_RMSE ($^\circ$)')
+            RPSE_figure.suptitle('RMSE plot for trial', fontsize=20)
+            RPSE_plot.set_title(self.trial_num)
+
+    # M: Plot CDF PSE every so many trials.
+    def CDFPlotter(self, plotVal):
+        if self.__isTimeToPlot():
+            RPSE_figure = plt.figure(figsize=(8, 6))
+            RPSE_plot = RPSE_figure.add_subplot(1, 1, 1)
+            RPSE_plot.plot(self.stimuli['frames'] * 180 / np.pi, plotVal)
+            RPSE_plot.set_xlabel('frame ($^\circ$)')
+            RPSE_plot.set_ylabel('PSE_CDF ($^\circ$)')
+            RPSE_figure.suptitle('CDF plot for trial', fontsize=20)
+            RPSE_plot.set_title(self.trial_num)
